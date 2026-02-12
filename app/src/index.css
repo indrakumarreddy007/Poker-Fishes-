@@ -1,0 +1,338 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+@layer base {
+  :root {
+    /* Poker Theme Colors */
+    --background: 0 0% 4%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 262 56% 59%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 168 76% 40%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 20%;
+    --input: 0 0% 15%;
+    --ring: 262 56% 59%;
+    --radius: 0.75rem;
+    
+    /* Custom Poker Colors */
+    --poker-purple: #7f56d9;
+    --poker-teal: #14b8a6;
+    --poker-gold: #f59e0b;
+    --poker-red: #ef4444;
+    --poker-green: #22c55e;
+    --poker-dark: #0a0a0a;
+    --poker-card: #111111;
+    --poker-felt: #1a3d1a;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+  }
+}
+
+@layer components {
+  /* Glass Card Effect */
+  .glass-card {
+    @apply backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  
+  /* Poker Chip Button */
+  .chip-button {
+    @apply relative overflow-hidden rounded-full font-semibold transition-all duration-300;
+    background: linear-gradient(145deg, var(--poker-purple), #6b46c1);
+    box-shadow: 0 4px 15px rgba(127, 86, 217, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  
+  .chip-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(127, 86, 217, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  
+  .chip-button:active {
+    transform: translateY(0);
+  }
+  
+  /* Gradient Text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, var(--poker-purple), var(--poker-teal));
+  }
+  
+  /* Glow Effect */
+  .glow-purple {
+    box-shadow: 0 0 30px rgba(127, 86, 217, 0.5);
+  }
+  
+  .glow-teal {
+    box-shadow: 0 0 30px rgba(20, 184, 166, 0.5);
+  }
+  
+  .glow-gold {
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.5);
+  }
+  
+  /* Poker Table Felt */
+  .poker-felt {
+    background: 
+      radial-gradient(ellipse at center, rgba(26, 61, 26, 0.8) 0%, rgba(10, 26, 10, 0.95) 100%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+  
+  /* Card Animation */
+  .card-flip {
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .card-flip.flipped {
+    transform: rotateY(180deg);
+  }
+  
+  /* Floating Animation */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(2deg); }
+  }
+  
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  /* Pulse Glow */
+  @keyframes pulse-glow {
+    0%, 100% { 
+      box-shadow: 0 0 20px rgba(127, 86, 217, 0.4);
+      transform: scale(1);
+    }
+    50% { 
+      box-shadow: 0 0 40px rgba(127, 86, 217, 0.8);
+      transform: scale(1.02);
+    }
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  
+  /* Shimmer Effect */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+  
+  /* Chip Stack Animation */
+  @keyframes chip-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+  
+  /* Fall animation for chip rain */
+  @keyframes fall {
+    0% {
+      transform: translateY(-100px) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(100vh) rotate(720deg);
+      opacity: 0;
+    }
+  }
+  
+  .animate-fall {
+    animation: fall 4s linear infinite;
+  }
+  
+  /* Slide in animations */
+  @keyframes slideInFromBottom {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slideInFromLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes slideInFromRight {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  .animate-slide-in-bottom {
+    animation: slideInFromBottom 0.5s ease-out forwards;
+  }
+  
+  .animate-slide-in-left {
+    animation: slideInFromLeft 0.5s ease-out forwards;
+  }
+  
+  .animate-slide-in-right {
+    animation: slideInFromRight 0.5s ease-out forwards;
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out forwards;
+  }
+  
+  .chip-stack:hover .chip {
+    animation: chip-bounce 0.3s ease;
+  }
+  
+  .chip-stack:hover .chip:nth-child(2) { animation-delay: 0.05s; }
+  .chip-stack:hover .chip:nth-child(3) { animation-delay: 0.1s; }
+  .chip-stack:hover .chip:nth-child(4) { animation-delay: 0.15s; }
+  .chip-stack:hover .chip:nth-child(5) { animation-delay: 0.2s; }
+  
+  /* Neon Border */
+  .neon-border {
+    position: relative;
+  }
+  
+  .neon-border::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, var(--poker-purple), var(--poker-teal), var(--poker-gold));
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  
+  .neon-border:hover::before {
+    opacity: 1;
+  }
+  
+  /* Scrollbar Styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--poker-purple), var(--poker-teal));
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #8b5cf6, #2dd4bf);
+  }
+}
+
+@layer utilities {
+  /* Text Shadow */
+  .text-shadow-glow {
+    text-shadow: 0 0 20px rgba(127, 86, 217, 0.5);
+  }
+  
+  /* Backdrop Blur */
+  .backdrop-blur-card {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  
+  /* Perspective */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  
+  /* Custom Transitions */
+  .transition-transform-opacity {
+    transition: transform 0.3s, opacity 0.3s;
+  }
+}
