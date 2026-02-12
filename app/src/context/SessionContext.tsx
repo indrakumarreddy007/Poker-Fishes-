@@ -1,221 +1,159 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { Session, BuyInRequest, ValidationResult, SessionHistory } from '@/types';
-import { mockSessions, mockSessionHistory, generateSessionCode, formatINR } from '@/data/mockData';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import type { Session, SessionHistory, ValidationResult } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import api from '@/lib/api';
+import { useAuth } from './AuthContext';
 
 interface SessionContextType {
   sessions: Session[];
   sessionHistory: SessionHistory[];
   currentSession: Session | null;
-  createSession: (name: string, adminId: string, adminName: string) => Session;
-  joinSession: (code: string, userId: string, userName: string, userEmail: string, userPicture: string) => boolean;
-  requestBuyIn: (sessionId: string, userId: string, userName: string, userPicture: string, amount: number) => void;
-  approveBuyIn: (sessionId: string, requestId: string, approvedBy: string) => void;
-  rejectBuyIn: (sessionId: string, requestId: string) => void;
-  endSession: (sessionId: string) => void;
-  updatePlayerStack: (sessionId: string, userId: string, stack: number) => void;
+  createSession: (name: string, adminId: string, adminName: string) => Promise<Session>;
+  joinSession: (code: string, userId: string, userName: string, userEmail: string, userPicture: string) => Promise<boolean>;
+  requestBuyIn: (sessionId: string, userId: string, userName: string, userPicture: string, amount: number) => Promise<void>;
+  approveBuyIn: (sessionId: string, requestId: string, approvedBy: string) => Promise<void>;
+  rejectBuyIn: (sessionId: string, requestId: string) => Promise<void>;
+  endSession: (sessionId: string) => Promise<void>;
+  updatePlayerStack: (sessionId: string, userId: string, stack: number) => Promise<void>;
   validateSession: (sessionId: string) => ValidationResult;
   getSessionByCode: (code: string) => Session | undefined;
   getSessionById: (id: string) => Session | undefined;
   getUserSessions: (userId: string) => Session[];
-  refreshSessions: () => void;
+  refreshSessions: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [sessions, setSessions] = useState<Session[]>(mockSessions);
-  const [sessionHistory, setSessionHistory] = useState<SessionHistory[]>(mockSessionHistory);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionHistory] = useState<SessionHistory[]>([]);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  const createSession = useCallback((name: string, adminId: string, adminName: string): Session => {
-    const newSession: Session = {
-      id: `session_${Date.now()}`,
-      code: generateSessionCode(),
-      name,
-      adminId,
-      adminName,
-      status: 'active',
-      createdAt: new Date(),
-      players: [],
-      buyInRequests: [],
-      totalBuyIn: 0,
-      totalStack: 0,
-      isValid: false,
-    };
-    
-    setSessions(prev => [newSession, ...prev]);
-    toast({
-      title: 'Session Created!',
-      description: `Session code: ${newSession.code}`,
-    });
-    return newSession;
+  const refreshSessions = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await api.get('/sessions');
+      setSessions(res.data);
+    } catch (error) {
+      console.error('Failed to fetch sessions', error);
+    }
+  }, [user]);
+
+  // Initial fetch
+  useEffect(() => {
+    refreshSessions();
+  }, [refreshSessions]);
+
+  const createSession = useCallback(async (name: string, adminId: string, adminName: string): Promise<Session> => {
+    try {
+      const res = await api.post('/sessions', { name, adminId, adminName });
+      const newSession = res.data;
+
+      setSessions(prev => [newSession, ...prev]);
+      toast({
+        title: 'Session Created!',
+        description: `Session code: ${newSession.code}`,
+      });
+      return newSession;
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create session',
+        variant: 'destructive',
+      });
+      throw error;
+    }
   }, [toast]);
 
-  const joinSession = useCallback((code: string, userId: string, userName: string, userEmail: string, userPicture: string): boolean => {
-    const session = sessions.find(s => s.code.toUpperCase() === code.toUpperCase() && s.status === 'active');
-    
-    if (!session) {
+  const joinSession = useCallback(async (code: string, userId: string, userName: string, userEmail: string, userPicture: string): Promise<boolean> => {
+    try {
+      const res = await api.post('/sessions/join', { code, userId, userName, userEmail, userPicture });
+      const updatedSession = res.data;
+
+      setSessions(prev => prev.map(s => s.id === updatedSession.id ? updatedSession : s));
+      setCurrentSession(updatedSession);
+
       toast({
-        title: 'Invalid Session Code',
-        description: 'Please check the code and try again.',
+        title: 'Joined Session!',
+        description: `Welcome to ${updatedSession.name}`,
+      });
+      return true;
+    } catch (error) {
+      toast({
+        title: 'Join Failed',
+        description: 'Invalid code or session ended',
         variant: 'destructive',
       });
       return false;
     }
+  }, [toast]);
 
-    if (session.players.find(p => p.userId === userId)) {
+  const requestBuyIn = useCallback(async (sessionId: string, userId: string, userName: string, userPicture: string, amount: number) => {
+    try {
+      const res = await api.post(`/sessions/${sessionId}/buyin`, { userId, userName, userPicture, amount });
+      const updatedSession = res.data;
+
+      setSessions(prev => prev.map(s => s.id === sessionId ? updatedSession : s));
+      if (currentSession?.id === sessionId) setCurrentSession(updatedSession);
+
       toast({
-        title: 'Already Joined',
-        description: 'You are already in this session.',
+        title: 'Buy-in Requested',
+        description: `Waiting for admin approval`,
       });
-      setCurrentSession(session);
-      return true;
+    } catch (error) {
+      console.error(error);
+      toast({ title: 'Error', description: 'Failed to request buy-in', variant: 'destructive' });
     }
+  }, [currentSession, toast]);
 
-    const updatedSession: Session = {
-      ...session,
-      players: [
-        ...session.players,
-        {
-          userId,
-          name: userName,
-          email: userEmail,
-          picture: userPicture,
-          buyIns: [],
-          currentStack: 0,
-          totalBuyIn: 0,
-          profitLoss: 0,
-          status: 'active',
-          joinedAt: new Date(),
-        },
-      ],
-    };
+  const approveBuyIn = useCallback(async (sessionId: string, requestId: string, approvedBy: string) => {
+    try {
+      const res = await api.put(`/sessions/${sessionId}/buyin/${requestId}/approve`, { approvedBy });
+      const updatedSession = res.data;
 
-    setSessions(prev => prev.map(s => s.id === session.id ? updatedSession : s));
-    setCurrentSession(updatedSession);
-    
-    toast({
-      title: 'Joined Session!',
-      description: `Welcome to ${session.name}`,
-    });
-    return true;
-  }, [sessions, toast]);
+      setSessions(prev => prev.map(s => s.id === sessionId ? updatedSession : s));
+      if (currentSession?.id === sessionId) setCurrentSession(updatedSession);
 
-  const requestBuyIn = useCallback((sessionId: string, userId: string, userName: string, userPicture: string, amount: number) => {
-    const request: BuyInRequest = {
-      id: `req_${Date.now()}`,
-      userId,
-      userName,
-      userPicture,
-      amount,
-      status: 'pending',
-      requestedAt: new Date(),
-    };
+      toast({
+        title: 'Buy-in Approved',
+        description: 'Player can now start playing!',
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  }, [currentSession, toast]);
 
-    setSessions(prev => prev.map(session => {
-      if (session.id === sessionId) {
-        return {
-          ...session,
-          buyInRequests: [...session.buyInRequests, request],
-        };
-      }
-      return session;
-    }));
+  const rejectBuyIn = useCallback(async (sessionId: string, requestId: string) => {
+    try {
+      const res = await api.put(`/sessions/${sessionId}/buyin/${requestId}/reject`);
+      const updatedSession = res.data;
 
-    toast({
-      title: 'Buy-in Requested',
-      description: `${formatINR(amount)} - Waiting for admin approval`,
-    });
-  }, [toast]);
+      setSessions(prev => prev.map(s => s.id === sessionId ? updatedSession : s));
+      if (currentSession?.id === sessionId) setCurrentSession(updatedSession);
 
-  const approveBuyIn = useCallback((sessionId: string, requestId: string, approvedBy: string) => {
-    setSessions(prev => prev.map(session => {
-      if (session.id === sessionId) {
-        const request = session.buyInRequests.find(r => r.id === requestId);
-        if (!request) return session;
+      toast({
+        title: 'Buy-in Rejected',
+        description: 'The request has been declined.',
+        variant: 'destructive',
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  }, [currentSession, toast]);
 
-        const updatedPlayers = session.players.map(player => {
-          if (player.userId === request.userId) {
-            const newBuyIn = {
-              id: requestId,
-              amount: request.amount,
-              status: 'approved' as const,
-              requestedAt: request.requestedAt,
-              approvedAt: new Date(),
-              approvedBy,
-            };
-            return {
-              ...player,
-              buyIns: [...player.buyIns, newBuyIn],
-              totalBuyIn: player.totalBuyIn + request.amount,
-            };
-          }
-          return player;
-        });
+  const updatePlayerStack = useCallback(async (sessionId: string, userId: string, stack: number) => {
+    try {
+      const res = await api.put(`/sessions/${sessionId}/stack`, { userId, stack });
+      const updatedSession = res.data;
 
-        const totalBuyIn = updatedPlayers.reduce((sum, p) => sum + p.totalBuyIn, 0);
-
-        return {
-          ...session,
-          players: updatedPlayers,
-          buyInRequests: session.buyInRequests.filter(r => r.id !== requestId),
-          totalBuyIn,
-        };
-      }
-      return session;
-    }));
-
-    toast({
-      title: 'Buy-in Approved',
-      description: 'Player can now start playing!',
-    });
-  }, [toast]);
-
-  const rejectBuyIn = useCallback((sessionId: string, requestId: string) => {
-    setSessions(prev => prev.map(session => {
-      if (session.id === sessionId) {
-        return {
-          ...session,
-          buyInRequests: session.buyInRequests.filter(r => r.id !== requestId),
-        };
-      }
-      return session;
-    }));
-
-    toast({
-      title: 'Buy-in Rejected',
-      description: 'The request has been declined.',
-      variant: 'destructive',
-    });
-  }, [toast]);
-
-  const updatePlayerStack = useCallback((sessionId: string, userId: string, stack: number) => {
-    setSessions(prev => prev.map(session => {
-      if (session.id === sessionId) {
-        const updatedPlayers = session.players.map(player => {
-          if (player.userId === userId) {
-            return {
-              ...player,
-              currentStack: stack,
-              profitLoss: stack - player.totalBuyIn,
-            };
-          }
-          return player;
-        });
-
-        const totalStack = updatedPlayers.reduce((sum, p) => sum + p.currentStack, 0);
-
-        return {
-          ...session,
-          players: updatedPlayers,
-          totalStack,
-        };
-      }
-      return session;
-    }));
-  }, []);
+      setSessions(prev => prev.map(s => s.id === sessionId ? updatedSession : s));
+      if (currentSession?.id === sessionId) setCurrentSession(updatedSession);
+    } catch (error) {
+      console.error(error);
+    }
+  }, [currentSession]);
 
   const validateSession = useCallback((sessionId: string): ValidationResult => {
     const session = sessions.find(s => s.id === sessionId);
@@ -237,52 +175,30 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       totalBuyIns: session.totalBuyIn,
       totalStacks: session.totalStack,
       difference,
-      message: isValid 
-        ? 'Session is balanced! All buy-ins match total stacks.' 
-        : `Difference: ${formatINR(Math.abs(difference))} - ${difference > 0 ? 'Missing from table' : 'Extra on table'}`,
+      message: isValid
+        ? 'Session is balanced! All buy-ins match total stacks.'
+        : `Difference: ${Math.abs(difference)} - ${difference > 0 ? 'Missing from table' : 'Extra on table'}`,
     };
   }, [sessions]);
 
-  const endSession = useCallback((sessionId: string) => {
+  const endSession = useCallback(async (sessionId: string) => {
     const validation = validateSession(sessionId);
-    
-    setSessions(prev => prev.map(session => {
-      if (session.id === sessionId) {
-        return {
-          ...session,
-          status: 'ended',
-          endedAt: new Date(),
-          isValid: validation.isValid,
-        };
-      }
-      return session;
-    }));
+    try {
+      const res = await api.put(`/sessions/${sessionId}/end`);
+      const updatedSession = res.data;
 
-    // Add to history
-    const session = sessions.find(s => s.id === sessionId);
-    if (session) {
-      session.players.forEach(player => {
-        const historyEntry: SessionHistory = {
-          sessionId: session.id,
-          sessionName: session.name,
-          code: session.code,
-          adminName: session.adminName,
-          date: new Date(),
-          totalBuyIn: player.totalBuyIn,
-          currentStack: player.currentStack,
-          profitLoss: player.profitLoss,
-          status: 'ended',
-        };
-        setSessionHistory(prev => [historyEntry, ...prev]);
+      setSessions(prev => prev.map(s => s.id === sessionId ? updatedSession : s));
+      if (currentSession?.id === sessionId) setCurrentSession(updatedSession);
+
+      toast({
+        title: validation.isValid ? 'Session Ended' : 'Session Ended (Unbalanced)',
+        description: validation.message,
+        variant: validation.isValid ? 'default' : 'destructive',
       });
+    } catch (error) {
+      console.error(error);
     }
-
-    toast({
-      title: validation.isValid ? 'Session Ended' : 'Session Ended (Unbalanced)',
-      description: validation.message,
-      variant: validation.isValid ? 'default' : 'destructive',
-    });
-  }, [sessions, validateSession, toast]);
+  }, [currentSession, validateSession, toast]);
 
   const getSessionByCode = useCallback((code: string) => {
     return sessions.find(s => s.code.toUpperCase() === code.toUpperCase());
@@ -293,14 +209,10 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [sessions]);
 
   const getUserSessions = useCallback((userId: string) => {
-    return sessions.filter(s => 
+    // This could also be an API call if user has many sessions
+    return sessions.filter(s =>
       s.adminId === userId || s.players.some(p => p.userId === userId)
     );
-  }, [sessions]);
-
-  const refreshSessions = useCallback(() => {
-    // In a real app, this would fetch from API
-    setSessions([...sessions]);
   }, [sessions]);
 
   return (

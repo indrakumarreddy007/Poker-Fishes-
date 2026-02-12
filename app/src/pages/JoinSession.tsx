@@ -3,10 +3,10 @@ import { useAuth } from '@/context/AuthContext';
 import { useSession } from '@/context/SessionContext';
 import { CardBack } from '@/components/PokerCard';
 import { PokerChip } from '@/components/PokerChip';
-import { 
-  Search, 
-  Users, 
-  Clock, 
+import {
+  Search,
+  Users,
+  Clock,
   X,
   Plus,
   Minus,
@@ -28,10 +28,10 @@ export const JoinSession: React.FC = () => {
 
   const handleJoin = async () => {
     if (!sessionCode.trim() || !user) return;
-    
+
     setIsJoining(true);
-    const success = joinSession(sessionCode, user.id, user.name, user.email, user.picture);
-    
+    const success = await joinSession(sessionCode, user.id, user.name, user.email, user.picture);
+
     if (success) {
       setJoinedSession(getUserSessions(user.id).find(s => s.code.toUpperCase() === sessionCode.toUpperCase()));
       setShowBuyInModal(true);
@@ -200,11 +200,10 @@ export const JoinSession: React.FC = () => {
                   <button
                     key={amount}
                     onClick={() => setBuyInAmount(amount)}
-                    className={`py-3 rounded-xl font-medium transition-all ${
-                      buyInAmount === amount
+                    className={`py-3 rounded-xl font-medium transition-all ${buyInAmount === amount
                         ? 'bg-purple-500 text-white'
                         : 'bg-white/5 text-white/70 hover:bg-white/10'
-                    }`}
+                      }`}
                   >
                     {formatINR(amount)}
                   </button>

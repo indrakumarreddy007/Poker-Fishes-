@@ -37,9 +37,7 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleLogin = () => {
-    // Page will be set by useEffect
-  };
+
 
   const renderPage = () => {
     switch (currentPage) {
@@ -53,9 +51,9 @@ const AppContent: React.FC = () => {
         return <AdminDashboard onNavigate={handleNavigate} />;
       case 'session-manage':
         return selectedSessionId ? (
-          <SessionManage 
-            sessionId={selectedSessionId} 
-            onBack={() => handleNavigate('admin-dashboard')} 
+          <SessionManage
+            sessionId={selectedSessionId}
+            onBack={() => handleNavigate('admin-dashboard')}
           />
         ) : (
           <AdminDashboard onNavigate={handleNavigate} />
@@ -72,14 +70,14 @@ const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen bg-black text-white">
       {!isAuthenticated ? (
-        <Login onLogin={handleLogin} />
+        <Login />
       ) : (
         <>
           <Navigation onNavigate={handleNavigate} currentPage={currentPage} />
           {renderPage()}
         </>
       )}
-      
+
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
     </div>
