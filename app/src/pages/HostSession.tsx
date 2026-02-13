@@ -1,8 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useSession } from '@/context/SessionContext';
-import { Plus, ArrowRight } from 'lucide-react';
+import {
+    Plus,
+    ArrowRight,
+    TrendingUp,
+    TrendingDown,
+    ChevronRight,
+    Calendar
+} from 'lucide-react';
 import { PokerChip } from '@/components/PokerChip';
+import { formatINR, formatDate } from '@/data/mockData';
 
 interface HostSessionProps {
     onNavigate: (page: string) => void;
@@ -10,9 +18,16 @@ interface HostSessionProps {
 
 export const HostSession: React.FC<HostSessionProps> = ({ onNavigate }) => {
     const { user } = useAuth();
-    const { createSession } = useSession();
+    const { createSession, getUserSessions } = useSession();
     const [sessionName, setSessionName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
+
+    const mySessions = useMemo(() => {
+        if (!user) return [];
+        return getUserSessions(user.id).sort((a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+    }, [user, getUserSessions]);
 
     const handleCreateSession = async () => {
         if (!sessionName.trim() || !user) return;
@@ -92,7 +107,7 @@ export const HostSession: React.FC<HostSessionProps> = ({ onNavigate }) => {
             </div>
 
             {/* Info Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 mb-12 max-w-4xl mx-auto">
                 <div className="glass-card p-6 rounded-2xl text-center animate-slide-in-bottom" style={{ animationDelay: '0.1s' }}>
                     <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-blue-500/20 flex items-center justify-center">
                         <span className="text-xl">👑</span>
@@ -117,6 +132,61 @@ export const HostSession: React.FC<HostSessionProps> = ({ onNavigate }) => {
                     <p className="text-sm text-white/50">Unique 6-digit code for your lobby</p>
                 </div>
             </div>
+
+            {/* Recent Sessions */}
+            {mySessions.length > 0 && (
+                <div className="max-w-2xl mx-auto animate-slide-in-bottom" style={{ animationDelay: '0.4s' }}>
+                    <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-purple-400" />
+                        Recent Sessions
+                    </h3>
+                    <div className="space-y-3">
+                        {mySessions.slice(0, 5).map((session) => {
+                            const player = session.players.find(p => p.userId === user?.id);
+                            const profitLoss = player ? (player.currentStack - player.totalBuyIn) : 0;
+                            const isWin = profitLoss >= 0;
+
+                            return (
+                                <div
+                                    key={session.id}
+                                    onClick={() => onNavigate(`session-${session.id}`)}
+                                    className="glass-card p-4 rounded-xl flex items-center justify-between hover:bg-white/5 transition-all cursor-pointer group"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${isWin ? 'bg-green-500/20 group-hover:bg-green-500/30' : 'bg-red-500/20 group-hover:bg-red-500/30'
+                                            }`}>
+                                            {isWin ? (
+                                                <TrendingUp className="w-6 h-6 text-green-400" />
+                                            ) : (
+                                                <TrendingDown className="w-6 h-6 text-red-400" />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-lg">{session.name}</p>
+                                            <p className="text-sm text-white/50 flex items-center gap-2">
+                                                <span>{formatDate(session.createdAt)}</span>
+                                                <span>•</span>
+                                                <span className="text-white/70">Code: <span className="font-mono">{session.code}</span></span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-right">
+                                            <p className={`font-bold text-lg ${isWin ? 'text-green-400' : 'text-red-400'}`}>
+                                                {isWin ? '+' : ''}{formatINR(profitLoss)}
+                                            </p>
+                                            <p className="text-xs text-white/50">
+                                                Buy-in: {formatINR(player?.totalBuyIn || 0)}
+                                            </p>
+                                        </div>
+                                        <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-white transition-colors" />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
