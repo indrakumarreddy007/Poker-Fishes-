@@ -8,7 +8,8 @@ import {
     ArrowRight,
     Search,
     LayoutGrid,
-    History as HistoryIcon
+    History as HistoryIcon,
+    LogOut
 } from 'lucide-react';
 import { formatINR, formatTime } from '@/data/mockData';
 import { CardBack } from '@/components/PokerCard';
@@ -19,7 +20,7 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     const { user } = useAuth();
-    const { createSession, joinSession, getUserSessions } = useSession();
+    const { sessions, createSession, joinSession, getUserSessions } = useSession();
     const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'join'>('overview');
 
     // Create Session State

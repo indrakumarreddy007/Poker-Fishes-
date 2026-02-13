@@ -8,9 +8,11 @@ import {
     Crown,
     Lock,
     Plus,
-    ArrowLeft
+    ArrowLeft,
+    DollarSign
 } from 'lucide-react';
 import { formatINR } from '@/data/mockData';
+import { PokerCard } from '@/components/PokerCard';
 
 interface SessionRoomProps {
     sessionId: string;
@@ -24,7 +26,9 @@ export const SessionRoom: React.FC<SessionRoomProps> = ({ sessionId, onBack }) =
         approveBuyIn,
         rejectBuyIn,
         requestBuyIn,
-        updatePlayerStack
+        updatePlayerStack,
+        validateSession,
+        endSession
     } = useSession();
 
     const session = getSessionById(sessionId);
