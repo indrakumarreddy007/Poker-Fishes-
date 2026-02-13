@@ -9,10 +9,11 @@ datasource db {
 
 model User {
   id            String    @id @default(uuid())
-  googleId      String    @unique
-  email         String
+  googleId      String?   @unique
+  password      String?
+  email         String    @unique
   name          String
-  picture       String
+  picture       String?
   role          String    @default("player") // "admin", "player", "both"
   currentRole   String    @default("player")
   createdAt     DateTime  @default(now())
