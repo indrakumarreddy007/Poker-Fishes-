@@ -31,6 +31,7 @@ passport.use(
         },
         async (accessToken, refreshToken, profile, done) => {
             try {
+                // 1. Check if user exists with googleId
                 const existingUser = await prisma.user.findUnique({
                     where: { googleId: profile.id }
                 });
@@ -39,6 +40,24 @@ passport.use(
                     return done(null, existingUser);
                 }
 
+                // 2. Check if user exists with email (account linking)
+                const existingEmailUser = await prisma.user.findUnique({
+                    where: { email: profile.emails[0].value }
+                });
+
+                if (existingEmailUser) {
+                    // Link the Google Account to the existing user
+                    const updatedUser = await prisma.user.update({
+                        where: { id: existingEmailUser.id },
+                        data: {
+                            googleId: profile.id,
+                            picture: existingEmailUser.picture || profile.photos[0].value
+                        }
+                    });
+                    return done(null, updatedUser);
+                }
+
+                // 3. Create new user
                 const user = await prisma.user.create({
                     data: {
                         googleId: profile.id,
