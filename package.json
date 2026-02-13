@@ -1,0 +1,13 @@
+{
+    "name": "poker-ledger-root",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "install-all": "cd api && npm install && npx prisma generate && cd ../app && npm install",
+        "build": "cd app && npm run build",
+        "postinstall": "npm run install-all"
+    },
+    "engines": {
+        "node": "18.x"
+    }
+}
