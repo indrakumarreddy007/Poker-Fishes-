@@ -2,6 +2,7 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const keys = require('../config/keys');
 const prisma = require('./db');
+const localStrategy = require('./localStrategy');
 
 passport.serializeUser((user, done) => {
     done(null, user.id);
@@ -15,6 +16,8 @@ passport.deserializeUser(async (id, done) => {
         done(err, null);
     }
 });
+
+passport.use(localStrategy);
 
 passport.use(
     new GoogleStrategy(
