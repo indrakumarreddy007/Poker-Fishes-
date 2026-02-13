@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { 
-  LogOut, 
-  SwitchCamera, 
-  LayoutDashboard, 
-  History, 
-  PlusCircle, 
+import {
+  LogOut,
+  SwitchCamera,
+  LayoutDashboard,
+  History,
+  PlusCircle,
   Users,
   Menu,
   X
@@ -28,15 +28,16 @@ export const Navigation: React.FC<NavigationProps> = ({ onNavigate, currentPage 
 
   const navItems = isAdmin
     ? [
-        { id: 'admin-dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'create-session', label: 'Create Session', icon: PlusCircle },
-        { id: 'manage-sessions', label: 'My Sessions', icon: Users },
-      ]
+      { id: 'admin-dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'create-session', label: 'Create Session', icon: PlusCircle },
+      { id: 'manage-sessions', label: 'My Sessions', icon: Users },
+    ]
     : [
-        { id: 'player-dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'join-session', label: 'Join Session', icon: Users },
-        { id: 'history', label: 'History', icon: History },
-      ];
+      { id: 'player-dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'host-session', label: 'Host Session', icon: PlusCircle },
+      { id: 'join-session', label: 'Join Session', icon: Users },
+      { id: 'history', label: 'History', icon: History },
+    ];
 
   const handleRoleSwitch = () => {
     switchRole();
@@ -51,7 +52,7 @@ export const Navigation: React.FC<NavigationProps> = ({ onNavigate, currentPage 
         <div className="max-w-7xl mx-auto">
           <div className="glass-card rounded-2xl px-4 py-3 flex items-center justify-between">
             {/* Logo */}
-            <div 
+            <div
               className="flex items-center gap-2 cursor-pointer hover:scale-105 transition-transform"
               onClick={() => onNavigate(isAdmin ? 'admin-dashboard' : 'player-dashboard')}
             >
@@ -70,11 +71,10 @@ export const Navigation: React.FC<NavigationProps> = ({ onNavigate, currentPage 
                   <button
                     key={item.id}
                     onClick={() => onNavigate(item.id)}
-                    className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all ${
-                      isActive
+                    className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all ${isActive
                         ? 'bg-white/10 text-white'
                         : 'text-white/60 hover:text-white hover:bg-white/5'
-                    }`}
+                      }`}
                   >
                     <Icon className="w-4 h-4" />
                     <span className="text-sm font-medium">{item.label}</span>
@@ -87,11 +87,10 @@ export const Navigation: React.FC<NavigationProps> = ({ onNavigate, currentPage 
             <div className="flex items-center gap-2">
               {/* Role Badge */}
               <div className="hidden sm:flex items-center gap-2">
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  isAdmin 
-                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${isAdmin
+                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
                     : 'bg-teal-500/20 text-teal-400 border border-teal-500/30'
-                }`}>
+                  }`}>
                   {isAdmin ? 'Admin' : 'Player'}
                 </span>
               </div>
@@ -138,21 +137,19 @@ export const Navigation: React.FC<NavigationProps> = ({ onNavigate, currentPage 
           <div className="flex gap-2">
             <button
               onClick={handleRoleSwitch}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                isAdmin
+              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${isAdmin
                   ? 'bg-white/5 text-white/60 hover:bg-white/10'
                   : 'bg-purple-500 text-white'
-              }`}
+                }`}
             >
               Player
             </button>
             <button
               onClick={handleRoleSwitch}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                isAdmin
+              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${isAdmin
                   ? 'bg-purple-500 text-white'
                   : 'bg-white/5 text-white/60 hover:bg-white/10'
-              }`}
+                }`}
             >
               Admin
             </button>
@@ -174,11 +171,10 @@ export const Navigation: React.FC<NavigationProps> = ({ onNavigate, currentPage 
                     onNavigate(item.id);
                     setIsMenuOpen(false);
                   }}
-                  className={`px-4 py-3 rounded-xl flex items-center gap-3 transition-all ${
-                    isActive
+                  className={`px-4 py-3 rounded-xl flex items-center gap-3 transition-all ${isActive
                       ? 'bg-white/10 text-white'
                       : 'text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
+                    }`}
                 >
                   <Icon className="w-5 h-5" />
                   <span className="font-medium">{item.label}</span>

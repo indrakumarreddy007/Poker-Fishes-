@@ -9,8 +9,7 @@ import {
   Wallet,
   ChevronRight,
   Trophy,
-  AlertTriangle,
-  Plus
+  AlertTriangle
 } from 'lucide-react';
 import {
   LineChart,
@@ -27,16 +26,10 @@ import {
 
 type TimeRange = 'weekly' | 'monthly' | 'yearly' | 'allTime';
 
-interface PlayerDashboardProps {
-  onNavigate: (page: string) => void;
-}
-
-export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ onNavigate }) => {
+export const PlayerDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { sessionHistory, createSession } = useSession();
+  const { sessionHistory } = useSession();
   const [timeRange, setTimeRange] = useState<TimeRange>('monthly');
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [sessionName, setSessionName] = useState('');
 
   const stats = mockPlayerStats[timeRange];
 
@@ -62,19 +55,6 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ onNavigate }) 
     allTime: 'All Time',
   };
 
-  const handleCreateSession = async () => {
-    if (!sessionName.trim() || !user) return;
-
-    try {
-      const newSession = await createSession(sessionName, user.id, user.name);
-      setShowCreateModal(false);
-      setSessionName('');
-      onNavigate(`session-${newSession.id}`);
-    } catch (error) {
-      console.error('Failed to create session');
-    }
-  };
-
   return (
     <div className="p-4 pt-24 max-w-7xl mx-auto animate-fade-in">
       {/* Header */}
@@ -85,13 +65,6 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ onNavigate }) 
           </h1>
           <p className="text-white/60">Here's your poker performance overview</p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-transform"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Host Session</span>
-        </button>
       </div>
 
       {/* Time Range Selector */}
@@ -101,8 +74,8 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ onNavigate }) 
             key={range}
             onClick={() => setTimeRange(range)}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${timeRange === range
-                ? 'bg-purple-500 text-white'
-                : 'bg-white/5 text-white/60 hover:bg-white/10'
+              ? 'bg-purple-500 text-white'
+              : 'bg-white/5 text-white/60 hover:bg-white/10'
               }`}
           >
             {timeRangeLabels[range]}
@@ -298,48 +271,6 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ onNavigate }) 
           ))}
         </div>
       </div>
-
-      {/* Create Session Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="glass-card p-8 rounded-3xl max-w-md w-full animate-scale-in">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-500 to-teal-500 flex items-center justify-center">
-                <Plus className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-bold mb-1">Host New Session</h3>
-              <p className="text-white/60">Start a new poker game</p>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm text-white/60 mb-2">Session Name</label>
-              <input
-                type="text"
-                value={sessionName}
-                onChange={(e) => setSessionName(e.target.value)}
-                placeholder="e.g., Friday Night Poker"
-                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition-all"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateSession}
-                disabled={!sessionName.trim()}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition-transform"
-              >
-                Create Session
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

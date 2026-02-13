@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { SessionProvider } from '@/context/SessionContext';
 import { Login } from '@/pages/Login';
 import { PlayerDashboard } from '@/pages/PlayerDashboard';
+import { HostSession } from '@/pages/HostSession';
 import { JoinSession } from '@/pages/JoinSession';
 import { History } from '@/pages/History';
 import { AdminDashboard } from '@/pages/AdminDashboard';
@@ -42,9 +43,11 @@ const AppContent: React.FC = () => {
   const renderPage = () => {
     switch (currentPage) {
       case 'player-dashboard':
-        return <PlayerDashboard onNavigate={handleNavigate} />;
+        return <PlayerDashboard />;
       case 'join-session':
         return <JoinSession />;
+      case 'host-session':
+        return <HostSession onNavigate={handleNavigate} />;
       case 'history':
         return <History />;
       case 'admin-dashboard':
@@ -62,7 +65,7 @@ const AppContent: React.FC = () => {
         return user?.currentRole === 'admin' ? (
           <AdminDashboard onNavigate={handleNavigate} />
         ) : (
-          <PlayerDashboard onNavigate={handleNavigate} />
+          <PlayerDashboard />
         );
     }
   };
