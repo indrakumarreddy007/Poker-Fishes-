@@ -3,15 +3,7 @@ const prisma = require('../services/db');
 module.exports = app => {
     // Create Session
     app.post('/api/sessions', async (req, res) => {
-        const { name } = req.body;
-
-        // Securely get admin info from logged in user
-        const adminId = req.user ? req.user.id : req.body.adminId;
-        const adminName = req.user ? req.user.name : req.body.adminName;
-
-        if (!adminId) {
-            return res.status(401).send({ error: 'User must be logged in' });
-        }
+        const { name, adminId, adminName } = req.body;
 
         // Generate code
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -21,101 +13,23 @@ module.exports = app => {
         }
 
         try {
-            const result = await prisma.$transaction(async (prisma) => {
-                // 1. Create the session
-                const session = await prisma.session.create({
-                    data: {
-                        code,
-                        name,
-                        adminId,
-                        adminName,
-                        status: 'active',
-                        isValid: false
-                    }
-                });
-
-                // 2. Automatically add Admin as a player (Admin-Player duality)
-                await prisma.sessionPlayer.create({
-                    data: {
-                        sessionId: session.id,
-                        userId: adminId,
-                        name: adminName,
-                        email: req.user ? req.user.email : '', // Fallback if needed, but schema requires string
-                        picture: req.user ? req.user.picture : '',
-                        status: 'active'
-                    }
-                });
-
-                return prisma.session.findUnique({
-                    where: { id: session.id },
-                    include: { players: true, buyInRequests: true }
-                });
-            });
-
-            res.send(result);
-        } catch (err) {
-            console.error(err);
-            res.status(500).send({ error: 'Failed to create session' });
-        }
-    });
-
-    // Settle & End Session (Bulk Update)
-    app.put('/api/sessions/:id/settle', async (req, res) => {
-        const { playerStacks } = req.body; // Array of { userId, currentStack }
-        const { id } = req.params;
-
-        try {
-            const session = await prisma.session.findUnique({
-                where: { id },
-                include: { players: true }
-            });
-
-            if (!session) return res.status(404).send({ error: 'Session not found' });
-            if (session.status !== 'active') return res.status(400).send({ error: 'Session already ended' });
-
-            const totalStack = playerStacks.reduce((sum, p) => sum + (parseInt(p.currentStack) || 0), 0);
-
-            // Exact match validation
-            if (totalStack !== session.totalBuyIn) {
-                return res.status(400).send({
-                    error: `Mismatch! Total Buy-in: ${session.totalBuyIn}, Total Stack: ${totalStack}. Difference: ${session.totalBuyIn - totalStack}`
-                });
-            }
-
-            const result = await prisma.$transaction(async (prisma) => {
-                // Update players
-                for (const p of playerStacks) {
-                    const playerRecord = session.players.find(sp => sp.userId === p.userId);
-                    if (playerRecord) {
-                        const currentStack = parseInt(p.currentStack) || 0;
-                        await prisma.sessionPlayer.update({
-                            where: { id: playerRecord.id },
-                            data: {
-                                currentStack: currentStack,
-                                profitLoss: currentStack - playerRecord.totalBuyIn,
-                                status: 'cashed_out'
-                            }
-                        });
-                    }
+            const session = await prisma.session.create({
+                data: {
+                    code,
+                    name,
+                    adminId,
+                    adminName,
+                    status: 'active',
+                    isValid: false
+                },
+                include: {
+                    players: true,
+                    buyInRequests: true
                 }
-
-                // End Session
-                return prisma.session.update({
-                    where: { id },
-                    data: {
-                        status: 'ended',
-                        endedAt: new Date(),
-                        totalStack: totalStack,
-                        isValid: true
-                    },
-                    include: { players: true, buyInRequests: true }
-                });
             });
-
-            res.send(result);
+            res.send(session);
         } catch (err) {
-            console.error(err);
-            res.status(500).send({ error: 'Failed to settle session' });
+            res.status(500).send({ error: 'Failed to create session' });
         }
     });
 
