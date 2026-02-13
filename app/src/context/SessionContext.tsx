@@ -73,7 +73,13 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const res = await api.post('/sessions/join', { code, userId, userName, userEmail, userPicture });
       const updatedSession = res.data;
 
-      setSessions(prev => prev.map(s => s.id === updatedSession.id ? updatedSession : s));
+      setSessions(prev => {
+        const exists = prev.some(s => s.id === updatedSession.id);
+        if (exists) {
+          return prev.map(s => s.id === updatedSession.id ? updatedSession : s);
+        }
+        return [updatedSession, ...prev];
+      });
       setCurrentSession(updatedSession);
 
       toast({
