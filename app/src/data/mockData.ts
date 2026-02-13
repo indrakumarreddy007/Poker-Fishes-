@@ -246,18 +246,20 @@ export const formatINR = (amount: number): string => {
 };
 
 // Format date
-export const formatDate = (date: Date): string => {
+export const formatDate = (date: Date | string): string => {
+  const d = typeof date === 'string' ? new Date(date) : date;
   return new Intl.DateTimeFormat('en-IN', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-  }).format(date);
+  }).format(d);
 };
 
 // Format time
-export const formatTime = (date: Date): string => {
+export const formatTime = (date: Date | string): string => {
+  const d = typeof date === 'string' ? new Date(date) : date;
   return new Intl.DateTimeFormat('en-IN', {
     hour: '2-digit',
     minute: '2-digit',
-  }).format(date);
+  }).format(d);
 };
