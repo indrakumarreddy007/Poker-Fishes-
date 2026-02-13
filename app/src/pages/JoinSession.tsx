@@ -10,13 +10,16 @@ import {
   X,
   Plus,
   Minus,
-  ArrowRight
+  ArrowRight,
+  Timer,
+  Trash2,
+  XCircle
 } from 'lucide-react';
 import { formatINR, formatTime } from '@/data/mockData';
 
 export const JoinSession: React.FC = () => {
   const { user } = useAuth();
-  const { joinSession, requestBuyIn, getUserSessions } = useSession();
+  const { joinSession, requestBuyIn, getUserSessions, dismissBuyInRequest } = useSession();
   const [sessionCode, setSessionCode] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [joinedSession, setJoinedSession] = useState<any>(null);
@@ -148,23 +151,62 @@ export const JoinSession: React.FC = () => {
 
                 {/* Player Stats in Session */}
                 <div className="mt-4 pt-4 border-t border-white/10">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-white/50">Your Buy-ins</p>
-                      <p className="text-lg font-semibold">
-                        {formatINR(session.players.find(p => p.userId === user?.id)?.totalBuyIn || 0)}
-                      </p>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-white/50">Your Buy-ins</p>
+                        <p className="text-lg font-semibold">
+                          {formatINR(session.players.find(p => p.userId === user?.id)?.totalBuyIn || 0)}
+                        </p>
+                      </div>
+
+                      {/* Check for pending requests */}
+                      {(() => {
+                        const myPendingRequest = session.buyInRequests.find(r => r.userId === user?.id && r.status === 'pending');
+
+                        if (myPendingRequest) {
+                          return (
+                            <div className="px-4 py-2 rounded-lg bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 flex items-center gap-2">
+                              <Timer className="w-4 h-4 animate-pulse" />
+                              <span className="text-sm font-medium">Request Pending: {formatINR(myPendingRequest.amount)}</span>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <button
+                            onClick={() => {
+                              setJoinedSession(session);
+                              setShowBuyInModal(true);
+                            }}
+                            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Request Buy-in</span>
+                          </button>
+                        );
+                      })()}
                     </div>
-                    <button
-                      onClick={() => {
-                        setJoinedSession(session);
-                        setShowBuyInModal(true);
-                      }}
-                      className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Request Buy-in</span>
-                    </button>
+
+                    {/* Rejected Requests List */}
+                    {session.buyInRequests.filter(r => r.userId === user?.id && r.status === 'rejected').map(req => (
+                      <div key={req.id} className="flex items-center justify-between p-3 rounded-lg bg-red-500/10 border border-red-500/20 animate-fade-in">
+                        <div className="flex items-center gap-2 text-red-400">
+                          <XCircle className="w-4 h-4" />
+                          <span className="text-sm">Buy-in Rejected: {formatINR(req.amount)}</span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            dismissBuyInRequest(session.id, req.id);
+                          }}
+                          className="p-1.5 rounded-md hover:bg-red-500/20 text-red-400 transition-colors"
+                          title="Dismiss"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -201,8 +243,8 @@ export const JoinSession: React.FC = () => {
                     key={amount}
                     onClick={() => setBuyInAmount(amount)}
                     className={`py-3 rounded-xl font-medium transition-all ${buyInAmount === amount
-                        ? 'bg-purple-500 text-white'
-                        : 'bg-white/5 text-white/70 hover:bg-white/10'
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-white/5 text-white/70 hover:bg-white/10'
                       }`}
                   >
                     {formatINR(amount)}

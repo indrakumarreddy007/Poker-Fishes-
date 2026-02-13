@@ -216,7 +216,10 @@ module.exports = app => {
     // Reject Buy-In
     app.put('/api/sessions/:id/buyin/:reqId/reject', async (req, res) => {
         try {
-            await prisma.buyInRequest.delete({ where: { id: req.params.reqId } });
+            await prisma.buyInRequest.update({
+                where: { id: req.params.reqId },
+                data: { status: 'rejected' }
+            });
 
             const session = await prisma.session.findUnique({
                 where: { id: req.params.id },
@@ -225,6 +228,23 @@ module.exports = app => {
             res.send(session);
         } catch (err) {
             res.status(500).send({ error: 'Failed to reject buy-in' });
+        }
+    });
+
+    // Delete Buy-In Request (Cancel/Dismiss)
+    app.delete('/api/sessions/:id/buyin/:reqId', async (req, res) => {
+        try {
+            await prisma.buyInRequest.delete({
+                where: { id: req.params.reqId }
+            });
+
+            const session = await prisma.session.findUnique({
+                where: { id: req.params.id },
+                include: { players: true, buyInRequests: true }
+            });
+            res.send(session);
+        } catch (err) {
+            res.status(500).send({ error: 'Failed to delete request' });
         }
     });
 

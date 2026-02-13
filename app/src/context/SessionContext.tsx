@@ -13,6 +13,7 @@ interface SessionContextType {
   requestBuyIn: (sessionId: string, userId: string, userName: string, userPicture: string, amount: number) => Promise<void>;
   approveBuyIn: (sessionId: string, requestId: string, approvedBy: string) => Promise<void>;
   rejectBuyIn: (sessionId: string, requestId: string) => Promise<void>;
+  dismissBuyInRequest: (sessionId: string, requestId: string) => Promise<void>;
   endSession: (sessionId: string) => Promise<void>;
   updatePlayerStack: (sessionId: string, userId: string, stack: number) => Promise<void>;
   validateSession: (sessionId: string) => ValidationResult;
@@ -143,6 +144,19 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [currentSession, toast]);
 
+  const dismissBuyInRequest = useCallback(async (sessionId: string, requestId: string) => {
+    try {
+      const res = await api.delete(`/sessions/${sessionId}/buyin/${requestId}`);
+      const updatedSession = res.data;
+
+      setSessions(prev => prev.map(s => s.id === sessionId ? updatedSession : s));
+      if (currentSession?.id === sessionId) setCurrentSession(updatedSession);
+    } catch (error) {
+      console.error(error);
+      toast({ title: 'Error', description: 'Failed to dismiss request', variant: 'destructive' });
+    }
+  }, [currentSession, toast]);
+
   const updatePlayerStack = useCallback(async (sessionId: string, userId: string, stack: number) => {
     try {
       const res = await api.put(`/sessions/${sessionId}/stack`, { userId, stack });
@@ -226,6 +240,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         requestBuyIn,
         approveBuyIn,
         rejectBuyIn,
+        dismissBuyInRequest,
         endSession,
         updatePlayerStack,
         validateSession,
