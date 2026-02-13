@@ -42,7 +42,7 @@ const AppContent: React.FC = () => {
   const renderPage = () => {
     switch (currentPage) {
       case 'player-dashboard':
-        return <PlayerDashboard />;
+        return <PlayerDashboard onNavigate={handleNavigate} />;
       case 'join-session':
         return <JoinSession />;
       case 'history':
@@ -62,7 +62,7 @@ const AppContent: React.FC = () => {
         return user?.currentRole === 'admin' ? (
           <AdminDashboard onNavigate={handleNavigate} />
         ) : (
-          <PlayerDashboard />
+          <PlayerDashboard onNavigate={handleNavigate} />
         );
     }
   };
