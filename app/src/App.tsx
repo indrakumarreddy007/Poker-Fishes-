@@ -17,57 +17,58 @@ const AppContent: React.FC = () => {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   // Set initial page based on user role
-  if (isAuthenticated && user) {
-    setCurrentPage('dashboard');
-  }
-}, [isAuthenticated, user]);
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setCurrentPage('dashboard');
+    }
+  }, [isAuthenticated, user]);
 
-const handleNavigate = (page: string) => {
-  if (page.startsWith('session-')) {
-    const sessionId = page.replace('session-', '');
-    setSelectedSessionId(sessionId);
-    setCurrentPage('session-room');
-  } else {
-    setCurrentPage(page);
-    setSelectedSessionId(null);
-  }
-};
+  const handleNavigate = (page: string) => {
+    if (page.startsWith('session-')) {
+      const sessionId = page.replace('session-', '');
+      setSelectedSessionId(sessionId);
+      setCurrentPage('session-room');
+    } else {
+      setCurrentPage(page);
+      setSelectedSessionId(null);
+    }
+  };
 
 
 
-const renderPage = () => {
-  switch (currentPage) {
-    case 'dashboard':
-      return <Dashboard onNavigate={handleNavigate} />;
-    case 'session-room':
-      return selectedSessionId ? (
-        <SessionRoom
-          sessionId={selectedSessionId}
-          onBack={() => handleNavigate('dashboard')}
-        />
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        return <Dashboard onNavigate={handleNavigate} />;
+      case 'session-room':
+        return selectedSessionId ? (
+          <SessionRoom
+            sessionId={selectedSessionId}
+            onBack={() => handleNavigate('dashboard')}
+          />
+        ) : (
+          <Dashboard onNavigate={handleNavigate} />
+        );
+      default:
+        return <Dashboard onNavigate={handleNavigate} />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-black text-white">
+      {!isAuthenticated ? (
+        <Login />
       ) : (
-        <Dashboard onNavigate={handleNavigate} />
-      );
-    default:
-      return <Dashboard onNavigate={handleNavigate} />;
-  }
-};
+        <>
+          <Navigation onNavigate={handleNavigate} currentPage={currentPage} />
+          {renderPage()}
+        </>
+      )}
 
-return (
-  <div className="min-h-screen bg-black text-white">
-    {!isAuthenticated ? (
-      <Login />
-    ) : (
-      <>
-        <Navigation onNavigate={handleNavigate} currentPage={currentPage} />
-        {renderPage()}
-      </>
-    )}
-
-    {/* Toast Notifications */}
-    <ToastContainer toasts={toasts} onDismiss={dismiss} />
-  </div>
-);
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />
+    </div>
+  );
 };
 
 // Main App Component with Providers

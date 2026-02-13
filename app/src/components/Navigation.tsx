@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import {
   LogOut,
-  Menu,
-  X,
   LayoutGrid
 } from 'lucide-react';
 
@@ -41,8 +39,8 @@ export const Navigation: React.FC<NavigationProps> = ({ onNavigate, currentPage 
               <button
                 onClick={() => onNavigate('dashboard')}
                 className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all ${currentPage === 'dashboard'
-                    ? 'bg-white/10 text-white'
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                  ? 'bg-white/10 text-white'
+                  : 'text-white/60 hover:text-white hover:bg-white/5'
                   }`}
               >
                 <LayoutGrid className="w-4 h-4" />
