@@ -149,8 +149,11 @@ export const HostSession: React.FC<HostSessionProps> = ({ onNavigate }) => {
                             return (
                                 <div
                                     key={session.id}
-                                    onClick={() => onNavigate(`session-${session.id}`)}
-                                    className="glass-card p-4 rounded-xl flex items-center justify-between hover:bg-white/5 transition-all cursor-pointer group"
+                                    onClick={() => {
+                                        console.log('Navigating to session:', session.id);
+                                        onNavigate(`session-${session.id}`);
+                                    }}
+                                    className="glass-card p-4 rounded-xl flex items-center justify-between hover:bg-white/5 transition-all cursor-pointer group relative z-30"
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${isWin ? 'bg-green-500/20 group-hover:bg-green-500/30' : 'bg-red-500/20 group-hover:bg-red-500/30'

@@ -28,8 +28,10 @@ const AppContent: React.FC = () => {
   }, [isAuthenticated, user]);
 
   const handleNavigate = (page: string) => {
+    console.log('handleNavigate called with:', page);
     if (page.startsWith('session-')) {
       const sessionId = page.replace('session-', '');
+      console.log('Parsed sessionId:', sessionId);
       setSelectedSessionId(sessionId);
       setCurrentPage('session-manage');
     } else {
