@@ -1,5 +1,4 @@
-const mongoose = require('mongoose');
-const Session = mongoose.model('sessions');
+const prisma = require('../services/db');
 
 module.exports = app => {
     // Create Session
@@ -13,20 +12,25 @@ module.exports = app => {
             code += chars.charAt(Math.floor(Math.random() * chars.length));
         }
 
-        const session = new Session({
-            code,
-            name,
-            adminId,
-            adminName,
-            status: 'active',
-            createdAt: new Date(),
-            totalBuyIn: 0,
-            totalStack: 0,
-            isValid: false
-        });
-
-        await session.save();
-        res.send(session);
+        try {
+            const session = await prisma.session.create({
+                data: {
+                    code,
+                    name,
+                    adminId,
+                    adminName,
+                    status: 'active',
+                    isValid: false
+                },
+                include: {
+                    players: true,
+                    buyInRequests: true
+                }
+            });
+            res.send(session);
+        } catch (err) {
+            res.status(500).send({ error: 'Failed to create session' });
+        }
     });
 
     // Get User Sessions
@@ -35,145 +39,268 @@ module.exports = app => {
             return res.status(401).send({ error: 'You must log in!' });
         }
 
-        const sessions = await Session.find({
-            $or: [
-                { adminId: req.user.id },
-                { 'players.userId': req.user.id }
-            ]
-        }).sort({ createdAt: -1 });
-
-        res.send(sessions);
+        try {
+            const sessions = await prisma.session.findMany({
+                where: {
+                    OR: [
+                        { adminId: req.user.id },
+                        {
+                            players: {
+                                some: { userId: req.user.id }
+                            }
+                        }
+                    ]
+                },
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    players: true,
+                    buyInRequests: true
+                }
+            });
+            res.send(sessions);
+        } catch (err) {
+            res.status(500).send({ error: 'Failed to fetch sessions' });
+        }
     });
 
     // Join Session
     app.post('/api/sessions/join', async (req, res) => {
         const { code, userId, userName, userEmail, userPicture } = req.body;
 
-        const session = await Session.findOne({
-            code: code.toUpperCase(),
-            status: 'active'
-        });
+        try {
+            const session = await prisma.session.findUnique({
+                where: { code: code.toUpperCase() },
+                include: { players: true }
+            });
 
-        if (!session) {
-            return res.status(404).send({ error: 'Session not found or ended' });
+            if (!session || session.status !== 'active') {
+                return res.status(404).send({ error: 'Session not found or ended' });
+            }
+
+            const existingPlayer = session.players.find(p => p.userId === userId);
+            if (existingPlayer) {
+                // Return full session data with relations
+                const fullSession = await prisma.session.findUnique({
+                    where: { id: session.id },
+                    include: { players: true, buyInRequests: true }
+                });
+                return res.send(fullSession);
+            }
+
+            // Add player
+            await prisma.sessionPlayer.create({
+                data: {
+                    sessionId: session.id,
+                    userId,
+                    name: userName,
+                    email: userEmail,
+                    picture: userPicture,
+                    status: 'active'
+                }
+            });
+
+            const updatedSession = await prisma.session.findUnique({
+                where: { id: session.id },
+                include: { players: true, buyInRequests: true }
+            });
+            res.send(updatedSession);
+        } catch (err) {
+            res.status(500).send({ error: 'Failed to join session' });
         }
-
-        const existingPlayer = session.players.find(p => p.userId === userId);
-        if (existingPlayer) {
-            return res.send(session); // Already joined, just return session
-        }
-
-        session.players.push({
-            userId,
-            name: userName,
-            email: userEmail,
-            picture: userPicture,
-            buyIns: [],
-            currentStack: 0,
-            totalBuyIn: 0,
-            profitLoss: 0,
-            status: 'active',
-            joinedAt: new Date()
-        });
-
-        await session.save();
-        res.send(session);
     });
 
     // Request Buy-In
     app.post('/api/sessions/:id/buyin', async (req, res) => {
         const { userId, userName, userPicture, amount } = req.body;
-        const session = await Session.findById(req.params.id);
 
-        if (!session) return res.status(404).send('Session not found');
+        try {
+            // Check if session exists
+            const session = await prisma.session.findUnique({ where: { id: req.params.id } });
+            if (!session) return res.status(404).send('Session not found');
 
-        const requestId = `req_${Date.now()}`;
-        session.buyInRequests.push({
-            id: requestId,
-            userId,
-            userName,
-            userPicture,
-            amount,
-            status: 'pending',
-            requestedAt: new Date()
-        });
+            await prisma.buyInRequest.create({
+                data: {
+                    sessionId: req.params.id,
+                    userId,
+                    userName,
+                    userPicture,
+                    amount,
+                    status: 'pending'
+                }
+            });
 
-        await session.save();
-        res.send(session);
+            const updatedSession = await prisma.session.findUnique({
+                where: { id: req.params.id },
+                include: { players: true, buyInRequests: true }
+            });
+            res.send(updatedSession);
+        } catch (err) {
+            res.status(500).send({ error: 'Failed to request buy-in' });
+        }
     });
 
     // Approve Buy-In
     app.put('/api/sessions/:id/buyin/:reqId/approve', async (req, res) => {
         const { approvedBy } = req.body;
-        const session = await Session.findById(req.params.id);
+        const { id, reqId } = req.params;
 
-        const request = session.buyInRequests.find(r => r.id === req.params.reqId);
-        if (!request) return res.status(404).send('Request not found');
+        try {
+            // Use transaction to ensure data integrity
+            const result = await prisma.$transaction(async (prisma) => {
+                const request = await prisma.buyInRequest.findUnique({ where: { id: reqId } });
+                if (!request) throw new Error('Request not found');
 
-        // Add to player's buy-ins
-        const player = session.players.find(p => p.userId === request.userId);
-        if (player) {
-            player.buyIns.push({
-                id: request.id,
-                amount: request.amount,
-                status: 'approved',
-                requestedAt: request.requestedAt,
-                approvedAt: new Date(),
-                approvedBy
+                // Update request status (or delete it? plan said delete from list, but schema has status)
+                // The mongoose code deleted it. Let's delete it or mark it approved.
+                // Plan mentions: "Stores pending/approved/rejected buy-ins." - so let's update status.
+                // BUT the Mongoose code removed it from the list.
+                // Let's stick to the Mongoose behavior of "processing" it:
+                // 1. Create BuyIn record (if we have that table) or just update player total
+                // 2. Remove BuyInRequest
+                // Used Schema: BuyInRequest, BuyIn, SessionPlayer(totalBuyIn)
+
+                // 1. Find the player
+                const player = await prisma.sessionPlayer.findUnique({
+                    where: {
+                        sessionId_userId: {
+                            sessionId: id,
+                            userId: request.userId
+                        }
+                    }
+                });
+
+                if (player) {
+                    // Update player total
+                    await prisma.sessionPlayer.update({
+                        where: { id: player.id },
+                        data: {
+                            totalBuyIn: { increment: request.amount },
+                            buyIns: {
+                                create: {
+                                    amount: request.amount,
+                                    status: 'approved',
+                                    requestedAt: request.requestedAt,
+                                    approvedBy: approvedBy || 'Admin'
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // 2. Update session total
+                await prisma.session.update({
+                    where: { id: id },
+                    data: { totalBuyIn: { increment: request.amount } }
+                });
+
+                // 3. Remove request (or update status? Mongoose removed it).
+                // Let's delete it to match frontend expectation of it disappearing from the "Requests" list.
+                await prisma.buyInRequest.delete({ where: { id: reqId } });
+
+                return prisma.session.findUnique({
+                    where: { id },
+                    include: {
+                        players: { include: { buyIns: true } },
+                        buyInRequests: true
+                    }
+                });
             });
-            player.totalBuyIn += request.amount;
+
+            res.send(result);
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({ error: err.message });
         }
-
-        // Remove from requests
-        session.buyInRequests = session.buyInRequests.filter(r => r.id !== req.params.reqId);
-
-        // Update session total
-        session.totalBuyIn += request.amount;
-
-        await session.save();
-        res.send(session);
     });
 
     // Reject Buy-In
     app.put('/api/sessions/:id/buyin/:reqId/reject', async (req, res) => {
-        const session = await Session.findById(req.params.id);
-        session.buyInRequests = session.buyInRequests.filter(r => r.id !== req.params.reqId);
-        await session.save();
-        res.send(session);
+        try {
+            await prisma.buyInRequest.delete({ where: { id: req.params.reqId } });
+
+            const session = await prisma.session.findUnique({
+                where: { id: req.params.id },
+                include: { players: true, buyInRequests: true }
+            });
+            res.send(session);
+        } catch (err) {
+            res.status(500).send({ error: 'Failed to reject buy-in' });
+        }
     });
 
     // Update Player Stack
     app.put('/api/sessions/:id/stack', async (req, res) => {
         const { userId, stack } = req.body;
-        const session = await Session.findById(req.params.id);
 
-        const player = session.players.find(p => p.userId === userId);
-        if (player) {
-            player.currentStack = stack;
-            player.profitLoss = stack - player.totalBuyIn;
+        try {
+            // Update player stack and profitLoss
+            // We need to fetch player first to know totalBuyIn for PL calc?
+            // Or we can do it in one go if we knew totalBuyIn.
+            // Let's fetch first.
+            const player = await prisma.sessionPlayer.findUnique({
+                where: {
+                    sessionId_userId: {
+                        sessionId: req.params.id,
+                        userId
+                    }
+                }
+            });
+
+            if (player) {
+                await prisma.sessionPlayer.update({
+                    where: { id: player.id },
+                    data: {
+                        currentStack: stack,
+                        profitLoss: stack - player.totalBuyIn
+                    }
+                });
+            }
+
+            // Recalculate session total stack
+            // Aggregate all players currentStack
+            const transport = await prisma.sessionPlayer.aggregate({
+                where: { sessionId: req.params.id },
+                _sum: { currentStack: true }
+            });
+
+            const totalStack = transport._sum.currentStack || 0;
+
+            const session = await prisma.session.update({
+                where: { id: req.params.id },
+                data: { totalStack },
+                include: { players: true, buyInRequests: true }
+            });
+
+            res.send(session);
+        } catch (err) {
+            res.status(500).send({ error: 'Failed to update stack' });
         }
-
-        // Recalculate session total stack
-        session.totalStack = session.players.reduce((sum, p) => sum + p.currentStack, 0);
-
-        await session.save();
-        res.send(session);
     });
 
     // End Session
     app.put('/api/sessions/:id/end', async (req, res) => {
-        const session = await Session.findById(req.params.id);
+        try {
+            const session = await prisma.session.findUnique({ where: { id: req.params.id } });
 
-        if (session) {
-            session.status = 'ended';
-            session.endedAt = new Date();
+            if (session) {
+                const difference = session.totalBuyIn - session.totalStack;
+                const isValid = difference === 0;
 
-            const difference = session.totalBuyIn - session.totalStack;
-            session.isValid = difference === 0;
-
-            await session.save();
+                const updatedSession = await prisma.session.update({
+                    where: { id: req.params.id },
+                    data: {
+                        status: 'ended',
+                        endedAt: new Date(),
+                        isValid
+                    },
+                    include: { players: true, buyInRequests: true }
+                });
+                res.send(updatedSession);
+            } else {
+                res.status(404).send({ error: 'Session not found' });
+            }
+        } catch (err) {
+            res.status(500).send({ error: 'Failed to end session' });
         }
-
-        res.send(session);
     });
 };

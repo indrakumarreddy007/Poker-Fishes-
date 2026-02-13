@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  googleId      String    @unique
+  email         String
+  name          String
+  picture       String
+  role          String    @default("player") // "admin", "player", "both"
+  currentRole   String    @default("player")
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  hostedSessions Session[]
+  playedSessions SessionPlayer[]
+  buyInRequests  BuyInRequest[]
+}
+
+model Session {
+  id            String    @id @default(uuid())
+  code          String    @unique
+  name          String
+  adminId       String
+  adminName     String
+  status        String    @default("active") // "active", "ended"
+  totalBuyIn    Int       @default(0)
+  totalStack    Int       @default(0)
+  isValid       Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  endedAt       DateTime?
+
+  // Relations
+  admin         User      @relation(fields: [adminId], references: [id])
+  players       SessionPlayer[]
+  buyInRequests BuyInRequest[]
+}
+
+model SessionPlayer {
+  id            String    @id @default(uuid())
+  sessionId     String
+  userId        String
+  name          String
+  email         String
+  picture       String
+  currentStack  Int       @default(0)
+  totalBuyIn    Int       @default(0)
+  profitLoss    Int       @default(0)
+  status        String    @default("active")
+  joinedAt      DateTime  @default(now())
+
+  // Relations
+  session       Session   @relation(fields: [sessionId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
+  buyIns        BuyIn[]
+
+  @@unique([sessionId, userId]) // User can only join a session once
+}
+
+model BuyInRequest {
+  id            String    @id @default(uuid()) // "req_..." prefix logic handled in app if needed, or just use uuid
+  sessionId     String
+  userId        String
+  userName      String
+  userPicture   String
+  amount        Int
+  status        String    @default("pending") // "pending", "approved", "rejected"
+  requestedAt   DateTime  @default(now())
+
+  // Relations
+  session       Session   @relation(fields: [sessionId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
+}
+
+model BuyIn {
+  id            String    @id @default(uuid())
+  playerId      String
+  amount        Int
+  status        String    // "approved"
+  requestedAt   DateTime
+  approvedAt    DateTime  @default(now())
+  approvedBy    String
+
+  player        SessionPlayer @relation(fields: [playerId], references: [id])
+}

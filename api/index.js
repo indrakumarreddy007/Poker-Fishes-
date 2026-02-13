@@ -1,16 +1,13 @@
 require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
 const cookieSession = require('cookie-session');
 const passport = require('passport');
 const cors = require('cors');
 const keys = require('./config/keys');
 
-require('./models/User');
-require('./models/Session');
+// Prisma Client is initialized in services/db.js
+// but for passport we need to ensure local strategy is set up
 require('./services/passport');
-
-mongoose.connect(keys.mongoURI);
 
 const app = express();
 
@@ -24,17 +21,25 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(express.json());
+
+// Allow frontend to make requests
 app.use(cors({
   origin: keys.redirectDomain, // Allow requests from frontend
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 require('./routes/authRoutes')(app);
 require('./routes/sessionRoutes')(app);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+
+// Only listen if not running in production (Vercel handles serverless)
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
 module.exports = app;
