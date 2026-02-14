@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { useSession } from '@/context/SessionContext';
-import { 
-  Calendar, 
-  TrendingUp, 
+import {
+  Calendar,
+  TrendingUp,
   TrendingDown,
   Search,
 } from 'lucide-react';
 import { formatINR, formatDate } from '@/data/mockData';
 
-export const History: React.FC = () => {
+interface HistoryProps {
+  onNavigate?: (page: string) => void;
+}
+
+export const History: React.FC<HistoryProps> = ({ onNavigate }) => {
   const { sessionHistory } = useSession();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'win' | 'loss'>('all');
@@ -17,10 +21,10 @@ export const History: React.FC = () => {
   const filteredHistory = sessionHistory
     .filter(session => {
       const matchesSearch = session.sessionName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          session.code.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesFilter = filterStatus === 'all' || 
-                           (filterStatus === 'win' && session.profitLoss >= 0) ||
-                           (filterStatus === 'loss' && session.profitLoss < 0);
+        session.code.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesFilter = filterStatus === 'all' ||
+        (filterStatus === 'win' && session.profitLoss >= 0) ||
+        (filterStatus === 'loss' && session.profitLoss < 0);
       return matchesSearch && matchesFilter;
     })
     .sort((a, b) => {
@@ -80,7 +84,7 @@ export const History: React.FC = () => {
             className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition-all"
           />
         </div>
-        
+
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value as any)}
@@ -114,13 +118,13 @@ export const History: React.FC = () => {
           filteredHistory.map((session) => (
             <div
               key={session.sessionId}
-              className="glass-card p-5 rounded-xl hover:bg-white/5 transition-colors"
+              onClick={() => onNavigate && onNavigate(`session-settlement-${session.sessionId}`)}
+              className="glass-card p-5 rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
             >
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    session.profitLoss >= 0 ? 'bg-green-500/20' : 'bg-red-500/20'
-                  }`}>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${session.profitLoss >= 0 ? 'bg-green-500/20' : 'bg-red-500/20'
+                    }`}>
                     {session.profitLoss >= 0 ? (
                       <TrendingUp className="w-6 h-6 text-green-400" />
                     ) : (

@@ -323,4 +323,72 @@ module.exports = app => {
             res.status(500).send({ error: 'Failed to end session' });
         }
     });
+
+    // Get Settlement
+    app.get('/api/sessions/:id/settlement', async (req, res) => {
+        try {
+            const session = await prisma.session.findUnique({
+                where: { id: req.params.id },
+                include: { players: true }
+            });
+
+            if (!session) return res.status(404).send({ error: 'Session not found' });
+
+            const players = session.players;
+            let winners = [];
+            let losers = [];
+
+            // 1. Calculate Net PL
+            players.forEach(p => {
+                const net = p.profitLoss; // currentStack - totalBuyIn
+                if (net > 0) winners.push({ ...p, balance: net });
+                else if (net < 0) losers.push({ ...p, balance: Math.abs(net) });
+            });
+
+            // 2. Sort by magnitude (descending) to optimize matching
+            winners.sort((a, b) => b.balance - a.balance);
+            losers.sort((a, b) => b.balance - a.balance);
+
+            const transactions = [];
+
+            // 3. Match
+            let i = 0; // winner index
+            let j = 0; // loser index
+
+            while (i < winners.length && j < losers.length) {
+                const winner = winners[i];
+                const loser = losers[j];
+
+                const amount = Math.min(winner.balance, loser.balance);
+
+                if (amount > 0) {
+                    transactions.push({
+                        from: loser.name,
+                        fromId: loser.userId,
+                        to: winner.name,
+                        toId: winner.userId,
+                        amount: amount
+                    });
+                }
+
+                winner.balance -= amount;
+                loser.balance -= amount;
+
+                // Move to next if fully settled (using small epsilon for float precision)
+                if (winner.balance < 0.01) i++;
+                if (loser.balance < 0.01) j++;
+            }
+
+            res.send({
+                sessionId: session.id,
+                transactions,
+                unsettledWinners: winners.filter(w => w.balance > 0.01),
+                unsettledLosers: losers.filter(l => l.balance > 0.01)
+            });
+
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({ error: 'Failed to generate settlement' });
+        }
+    });
 };

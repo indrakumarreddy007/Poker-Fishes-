@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useSession } from '@/context/SessionContext';
-import { 
-  CheckCircle, 
-  XCircle, 
+import {
+  CheckCircle,
+  XCircle,
   AlertTriangle,
   Lock,
   Save
@@ -12,18 +12,19 @@ import { formatINR } from '@/data/mockData';
 interface SessionManageProps {
   sessionId: string;
   onBack: () => void;
+  onNavigate: (page: string) => void;
 }
 
-export const SessionManage: React.FC<SessionManageProps> = ({ sessionId, onBack }) => {
-  const { 
-    getSessionById, 
-    approveBuyIn, 
-    rejectBuyIn, 
-    endSession, 
+export const SessionManage: React.FC<SessionManageProps> = ({ sessionId, onBack, onNavigate }) => {
+  const {
+    getSessionById,
+    approveBuyIn,
+    rejectBuyIn,
+    endSession,
     updatePlayerStack,
-    validateSession 
+    validateSession
   } = useSession();
-  
+
   const session = getSessionById(sessionId);
   const [showEndModal, setShowEndModal] = useState(false);
   const [playerStacks, setPlayerStacks] = useState<Record<string, number>>({});
@@ -53,10 +54,10 @@ export const SessionManage: React.FC<SessionManageProps> = ({ sessionId, onBack 
     setValidationResult(validation);
   };
 
-  const handleEndSession = () => {
-    endSession(sessionId);
+  const handleEndSession = async () => {
+    await endSession(sessionId);
     setShowEndModal(false);
-    onBack();
+    onNavigate(`session-settlement-${sessionId}`);
   };
 
   return (
@@ -78,13 +79,25 @@ export const SessionManage: React.FC<SessionManageProps> = ({ sessionId, onBack 
             <span className="text-white/60">Code: <span className="font-bold text-white">{session.code}</span></span>
           </div>
         </div>
-        <button
-          onClick={() => setShowEndModal(true)}
-          className="px-6 py-3 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
-        >
-          <Lock className="w-5 h-5" />
-          <span>End Session</span>
-        </button>
+        <div className="flex gap-3">
+          {session.status === 'ended' ? (
+            <button
+              onClick={() => onNavigate(`session-settlement-${sessionId}`)}
+              className="px-6 py-3 rounded-xl bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors flex items-center gap-2"
+            >
+              <CheckCircle className="w-5 h-5" />
+              <span>View Settlement</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowEndModal(true)}
+              className="px-6 py-3 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <Lock className="w-5 h-5" />
+              <span>End Session</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Session Stats */}
@@ -194,7 +207,7 @@ export const SessionManage: React.FC<SessionManageProps> = ({ sessionId, onBack 
                   )}
                 </div>
               </div>
-              
+
               {/* Buy-in History */}
               {player.buyIns.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-white/10">
@@ -229,10 +242,9 @@ export const SessionManage: React.FC<SessionManageProps> = ({ sessionId, onBack 
 
       {/* Validation Result */}
       {validationResult && (
-        <div 
-          className={`glass-card p-6 rounded-2xl mb-8 animate-slide-in-bottom ${
-            validationResult.isValid ? 'border-green-500/30' : 'border-red-500/30'
-          }`}
+        <div
+          className={`glass-card p-6 rounded-2xl mb-8 animate-slide-in-bottom ${validationResult.isValid ? 'border-green-500/30' : 'border-red-500/30'
+            }`}
           style={{ animationDelay: '0.6s' }}
         >
           <div className="flex items-center gap-3 mb-4">
